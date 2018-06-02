@@ -1,5 +1,7 @@
 #![allow(non_camel_case_types)]
 
+use super::schema::{items_ls, category_map_ls};
+
 #[derive(DbEnum, Copy, Clone, PartialEq, Debug)]
 #[DieselType = "Item_category_ls"]
 pub enum LSCategory {
@@ -88,11 +90,28 @@ pub struct LSItem {
     pub is_catalyst: bool,
 }
 
+#[derive(Insertable)]
+#[table_name = "items_ls"]
+pub struct LSNewItem<'a> {
+    pub name: &'a str,
+    pub ty: LSType,
+    pub lv: i32,
+    pub base_price: Option<i32>,
+    pub is_catalyst: bool,
+}
+
 #[derive(Identifiable, Queryable, Associations, Debug)]
 #[table_name = "category_map_ls"]
 #[belongs_to(LSItem, foreign_key = "item_id")]
 pub struct LSCategoryMapItem {
     pub id: i32,
+    pub item_id: i32,
+    pub category: LSCategory,
+}
+
+#[derive(Insertable)]
+#[table_name = "category_map_ls"]
+pub struct LSNewCategoryMapItem {
     pub item_id: i32,
     pub category: LSCategory,
 }
