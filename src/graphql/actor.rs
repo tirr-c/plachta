@@ -21,6 +21,7 @@ use ::{
     PgConnectionPool,
     graphql::{
         Context,
+        Mutation,
         Schema,
         Query,
     },
@@ -34,7 +35,7 @@ pub struct GraphQlExecutor {
 impl GraphQlExecutor {
     pub fn new(conn: PgConnectionPool) -> Self {
         GraphQlExecutor {
-            schema: juniper::RootNode::new(Query, juniper::EmptyMutation::new()),
+            schema: juniper::RootNode::new(Query, Mutation),
             ctx: Context::new(conn),
         }
     }

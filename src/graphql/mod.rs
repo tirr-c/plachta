@@ -20,24 +20,16 @@ use {
 };
 
 mod actor;
+mod mutation;
 mod query;
 
 pub use self::query::Query;
+pub use self::mutation::Mutation;
 pub use self::actor::{
     GraphQlExecutor,
     QueryMessage,
     QueryResponse,
 };
-
-#[derive(GraphQLInputObject)]
-struct LSNewItem {
-    name: String,
-    ty: LSType,
-    lv: i32,
-    base_price: Option<i32>,
-    is_catalyst: bool,
-    categories: Vec<LSCategory>,
-}
 
 #[derive(Clone)]
 pub struct Context {
@@ -56,4 +48,4 @@ impl Context {
     }
 }
 
-pub type Schema = juniper::RootNode<'static, Query, juniper::EmptyMutation<Context>>;
+pub type Schema = juniper::RootNode<'static, Query, Mutation>;
