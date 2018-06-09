@@ -18,19 +18,19 @@ use ::{
 };
 
 pub struct Query;
-pub struct LS;
+pub struct LydieSuelle;
 
 graphql_object!(Query: Context |&self| {
     field api_version() -> &str {
         "0.1"
     }
 
-    field ls() -> LS {
-        LS
+    field lydie_suelle() -> LydieSuelle {
+        LydieSuelle
     }
 });
 
-graphql_object!(LS: Context |&self| {
+graphql_object!(LydieSuelle: Context |&self| {
     field item(
         &executor,
         id: i32
