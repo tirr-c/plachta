@@ -50,6 +50,10 @@ impl Context {
             conn
         }
     }
+
+    pub fn connection_pool(&self) -> &PgConnectionPool {
+        &self.conn
+    }
 }
 
 pub type Schema = juniper::RootNode<'static, Query, juniper::EmptyMutation<Context>>;

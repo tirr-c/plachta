@@ -105,7 +105,7 @@ make_variant_slice! {
     }
 }
 
-#[derive(Identifiable, Queryable, GraphQLObject, Debug)]
+#[derive(Identifiable, Queryable, Debug)]
 #[table_name = "items_ls"]
 pub struct LSItem {
     pub id: i32,
@@ -126,7 +126,7 @@ pub struct LSNewItem<'a> {
     pub is_catalyst: bool,
 }
 
-#[derive(Identifiable, Queryable, Associations, GraphQLObject, Debug)]
+#[derive(Identifiable, Queryable, Associations, Debug)]
 #[table_name = "category_map_ls"]
 #[belongs_to(LSItem, foreign_key = "item_id")]
 pub struct LSCategoryMapItem {
@@ -140,4 +140,28 @@ pub struct LSCategoryMapItem {
 pub struct LSNewCategoryMapItem {
     pub item_id: i32,
     pub category: LSCategory,
+}
+
+mod graphql_impl {
+    use diesel::prelude::*;
+    use juniper::FieldResult;
+    use super::*;
+    use ::graphql::Context;
+
+    graphql_object!(LSItem: Context |&self| {
+        field id() -> i32 { self.id }
+        field name() -> &str { &self.name }
+        field level() -> i32 { self.lv }
+        field item_type() -> LSType { self.ty }
+        field base_price() -> Option<i32> { self.base_price }
+        field is_catalyst() -> bool { self.is_catalyst }
+
+        field categories(&executor) -> FieldResult<Vec<LSCategory>> {
+            let conn = executor.context().connection_pool().get()?;
+            let categories = LSCategoryMapItem::belonging_to(self)
+                .select(category_map_ls::category)
+                .load::<LSCategory>(&conn)?;
+            Ok(categories)
+        }
+    });
 }

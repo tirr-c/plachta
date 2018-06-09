@@ -10,7 +10,6 @@ use ::{
         LSCategory,
         LSType,
         LSItem,
-        LSCategoryMapItem,
     },
     schema::{
         category_map_ls,
@@ -36,7 +35,7 @@ graphql_object!(LS: Context |&self| {
         &executor,
         id: i32
     ) -> FieldResult<LSItem> {
-        let conn = executor.context().conn.get()?;
+        let conn = executor.context().connection_pool().get()?;
         Ok(items_ls::table
             .filter(items_ls::id.eq(id))
             .get_result::<LSItem>(&conn)?)
@@ -45,31 +44,35 @@ graphql_object!(LS: Context |&self| {
     field items(
         &executor,
         ty: Option<LSType>,
-        is_catalyst: Option<bool>
+        is_catalyst: Option<bool>,
+        category: Option<Vec<LSCategory>>
     ) -> FieldResult<Vec<LSItem>> {
-        Ok(match (ty, is_catalyst) {
-            (Some(ty), Some(is_catalyst)) => {
-                let conn = executor.context().conn.get()?;
-                items_ls::table
-                    .filter(items_ls::ty.eq(ty))
-                    .filter(items_ls::is_catalyst.eq(is_catalyst))
-                    .load::<LSItem>(&conn)?
-            }
-            (Some(ty), None) => {
-                let conn = executor.context().conn.get()?;
-                items_ls::table
-                    .filter(items_ls::ty.eq(ty))
-                    .load::<LSItem>(&conn)?
-            }
-            (None, Some(is_catalyst)) => {
-                let conn = executor.context().conn.get()?;
-                items_ls::table
-                    .filter(items_ls::is_catalyst.eq(is_catalyst))
-                    .load::<LSItem>(&conn)?
-            }
-            _ => {
-                return Err("invalid query".into());
-            }
+        let category = category.and_then(|v| if v.is_empty() { None } else { Some(v) });
+        if ty.is_none() && is_catalyst.is_none() && category.is_none() {
+            return Err("invalid query".into());
+        }
+
+        let conn = executor.context().connection_pool().get()?;
+        let mut query = items_ls::table
+            .distinct_on(items_ls::id)
+            .into_boxed();
+        if let Some(ty) = ty {
+            query = query.filter(items_ls::ty.eq(ty));
+        }
+        if let Some(is_catalyst) = is_catalyst {
+            query = query.filter(items_ls::is_catalyst.eq(is_catalyst));
+        }
+        Ok(match category {
+            Some(category) => {
+                let query = query
+                    .inner_join(category_map_ls::table)
+                    .select(items_ls::all_columns)
+                    .filter(category_map_ls::category.eq_any(category));
+                query.load::<LSItem>(&conn)?
+            },
+            None => {
+                query.load::<LSItem>(&conn)?
+            },
         })
     }
 });
