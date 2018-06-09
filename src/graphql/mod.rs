@@ -1,23 +1,5 @@
-use ::{
-    PgConnectionPool,
-    models::{
-        LSCategory,
-        LSType,
-        LSItem,
-        LSCategoryMapItem,
-    },
-    schema::{
-        category_map_ls,
-        items_ls,
-    },
-};
-use {
-    diesel::prelude::*,
-    juniper::{
-        self,
-        FieldResult,
-    },
-};
+use juniper;
+use ::PgConnectionPool;
 
 mod actor;
 mod mutation;

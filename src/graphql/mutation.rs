@@ -1,11 +1,8 @@
 use {
-    diesel::prelude::*,
     juniper::FieldResult,
 };
 use ::{
-    graphql::{
-        Context,
-    },
+    graphql::Context,
     models::{
         LSCategory,
         LSType,
