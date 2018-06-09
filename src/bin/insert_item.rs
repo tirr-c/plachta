@@ -15,6 +15,7 @@ use {
 
 fn main() -> QueryResult<()> {
     let conn = establish_connection();
+    let conn = conn.get().unwrap();
 
     let item = new_item(
         &conn,

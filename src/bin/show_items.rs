@@ -13,7 +13,8 @@ use self::{
 };
 
 fn main() -> QueryResult<()> {
-    let connection = establish_connection();
+    let connection_pool = establish_connection();
+    let connection = connection_pool.get().unwrap();
 
     let results =
         items_ls::table
