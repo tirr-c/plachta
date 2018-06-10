@@ -126,6 +126,16 @@ pub struct LSNewItem<'a> {
     pub is_catalyst: bool,
 }
 
+#[derive(AsChangeset)]
+#[table_name = "items_ls"]
+pub struct LSUpdateItem<'a> {
+    pub name: Option<&'a str>,
+    pub ty: Option<LSType>,
+    pub lv: Option<i32>,
+    pub base_price: Option<Option<i32>>,
+    pub is_catalyst: Option<bool>,
+}
+
 #[derive(Identifiable, Queryable, Associations, Debug)]
 #[table_name = "category_map_ls"]
 #[belongs_to(LSItem, foreign_key = "item_id")]

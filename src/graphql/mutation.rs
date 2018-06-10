@@ -1,4 +1,8 @@
 use {
+    diesel::{
+        self,
+        prelude::*,
+    },
     juniper::FieldResult,
 };
 use ::{
@@ -7,11 +11,16 @@ use ::{
         LSCategory,
         LSType,
         LSItem,
+        LSUpdateItem,
+    },
+    schema::{
+        category_map_ls,
+        items_ls,
     },
 };
 
 pub struct Mutation;
-pub struct LydieSuelleMut;
+pub struct LydieSuelle;
 
 #[derive(GraphQLInputObject)]
 struct LSNewItem {
@@ -24,13 +33,54 @@ struct LSNewItem {
     categories: Vec<LSCategory>,
 }
 
+#[derive(GraphQLInputObject)]
+struct LSModifyItem {
+    name: Option<String>,
+    #[graphql(name = "type")]
+    ty: Option<LSType>,
+    level: Option<i32>,
+    tradeable: Option<bool>,
+    base_price: Option<i32>,
+    is_catalyst: Option<bool>,
+}
+
+impl LSModifyItem {
+    fn as_changeset(&self) -> Result<LSUpdateItem, &'static str> {
+        let base_price = match (self.tradeable, self.base_price) {
+            (None, base_price) => base_price.map(Some),
+            (Some(true), Some(b)) => Some(Some(b)),
+            (Some(false), None) => Some(None),
+            _ => return Err("invalid mutation"),
+        };
+        Ok(LSUpdateItem {
+            name: self.name.as_ref().map(|x| x.as_ref()),
+            ty: self.ty,
+            lv: self.level,
+            base_price,
+            is_catalyst: self.is_catalyst,
+        })
+    }
+}
+
+#[derive(GraphQLEnum, Copy, Clone, PartialEq, Eq, Debug)]
+enum ModifyCategoryOp {
+    Add,
+    Remove,
+}
+
+#[derive(GraphQLInputObject)]
+struct LSModifyCategory {
+    category: LSCategory,
+    op: ModifyCategoryOp,
+}
+
 graphql_object!(Mutation: Context |&self| {
-    field lydie_suelle() -> LydieSuelleMut {
-        LydieSuelleMut
+    field lydie_suelle() -> LydieSuelle {
+        LydieSuelle
     }
 });
 
-graphql_object!(LydieSuelleMut: Context |&self| {
+graphql_object!(LydieSuelle: Context as "LydieSuelleMut" |&self| {
     field create_item(&executor, new_item: LSNewItem) -> FieldResult<LSItem> {
         let conn = executor.context().connection_pool().get()?;
         let result = ::new_item(
@@ -43,5 +93,79 @@ graphql_object!(LydieSuelleMut: Context |&self| {
             &new_item.categories
         )?;
         Ok(result)
+    }
+
+    field modify_item_data(&executor, id: i32, item: LSModifyItem) -> FieldResult<LSItem> {
+        let conn = executor.context().connection_pool().get()?;
+        let changeset = item.as_changeset()?;
+        let ret = diesel::update(items_ls::table.filter(items_ls::id.eq(id)))
+            .set(changeset)
+            .get_result::<LSItem>(&conn)?;
+        Ok(ret)
+    }
+
+    field modify_item_category(
+        &executor,
+        id: i32,
+        categories: Vec<LSModifyCategory>
+    ) -> FieldResult<LSItem> {
+        let conn = executor.context().connection_pool().get()?;
+        let (adds, removes): (Vec<_>, Vec<_>) =
+                              categories
+                              .into_iter()
+                              .partition(|x| x.op == ModifyCategoryOp::Add);
+        let removes: Vec<_> = removes.into_iter().map(|x| x.category).collect();
+        diesel::delete(
+            category_map_ls::table.filter(
+                category_map_ls::item_id.eq(id).and(
+                    category_map_ls::category.eq_any(removes)
+                )
+            )
+        ).execute(&conn)?;
+        let adds: Vec<_> = adds
+            .into_iter()
+            .map(
+                move |x| (
+                    category_map_ls::item_id.eq(id),
+                    category_map_ls::category.eq(x.category)
+                )
+            )
+            .collect();
+        diesel::insert_into(category_map_ls::table)
+            .values(&adds)
+            .execute(&conn)?;
+        let ret = items_ls::table
+            .filter(items_ls::id.eq(id))
+            .get_result(&conn)?;
+        Ok(ret)
+    }
+
+    field set_item_category(
+        &executor,
+        id: i32,
+        categories: Vec<LSCategory>
+    ) -> FieldResult<LSItem> {
+        let conn = executor.context().connection_pool().get()?;
+        diesel::delete(
+            category_map_ls::table.filter(
+                category_map_ls::item_id.eq(id)
+            )
+        ).execute(&conn)?;
+        let adds: Vec<_> = categories
+            .into_iter()
+            .map(
+                move |category| (
+                    category_map_ls::item_id.eq(id),
+                    category_map_ls::category.eq(category)
+                )
+            )
+            .collect();
+        diesel::insert_into(category_map_ls::table)
+            .values(&adds)
+            .execute(&conn)?;
+        let ret = items_ls::table
+            .filter(items_ls::id.eq(id))
+            .get_result(&conn)?;
+        Ok(ret)
     }
 });
