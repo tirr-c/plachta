@@ -18,23 +18,31 @@ use ::{
 };
 
 pub struct Query;
-pub struct LydieSuelle;
+struct LydieSuelle;
 
 graphql_object!(Query: Context |&self| {
-    field api_version() -> &str {
+    field api_version() -> &str as
+    "현재 API 버전입니다."
+    {
         "0.1"
     }
 
-    field lydie_suelle() -> LydieSuelle {
+    field lydie_suelle() -> LydieSuelle as
+    "<리디&수르의 아틀리에> 정보를 쿼리합니다."
+    {
         LydieSuelle
     }
 });
 
 graphql_object!(LydieSuelle: Context |&self| {
+    description: "<리디&수르의 아틀리에> 정보를 쿼리할 수 있는 오브젝트입니다."
+
     field item(
         &executor,
         id: i32
-    ) -> FieldResult<LSItem> {
+    ) -> FieldResult<LSItem> as
+    "특정 ID를 가진 아이템 정보를 가져옵니다."
+    {
         let conn = executor.context().connection_pool().get()?;
         Ok(items_ls::table
             .filter(items_ls::id.eq(id))
@@ -46,7 +54,9 @@ graphql_object!(LydieSuelle: Context |&self| {
         ty: Option<LSType>,
         is_catalyst: Option<bool>,
         category: Option<Vec<LSCategory>>
-    ) -> FieldResult<Vec<LSItem>> {
+    ) -> FieldResult<Vec<LSItem>> as
+    "조건에 맞는 아이템 정보를 가져옵니다."
+    {
         let category = category.and_then(|v| if v.is_empty() { None } else { Some(v) });
         if ty.is_none() && is_catalyst.is_none() && category.is_none() {
             return Err("invalid query".into());

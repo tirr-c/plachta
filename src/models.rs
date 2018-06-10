@@ -159,14 +159,22 @@ mod graphql_impl {
     use ::graphql::Context;
 
     graphql_object!(LSItem: Context |&self| {
-        field id() -> i32 { self.id }
-        field name() -> &str { &self.name }
-        field level() -> i32 { self.lv }
-        field item_type() -> LSType { self.ty }
-        field base_price() -> Option<i32> { self.base_price }
-        field is_catalyst() -> bool { self.is_catalyst }
+        description: "<리디 & 수르의 아틀리에> 아이템 정보를 나타내는 오브젝트입니다."
 
-        field categories(&executor) -> FieldResult<Vec<LSCategory>> {
+        field id() -> i32 as "아이템 ID입니다." { self.id }
+        field name() -> &str as "아이템 이름입니다." { &self.name }
+        field level() -> i32 as "아이템 레벨입니다." { self.lv }
+        field item_type() -> LSType as "아이템 종류입니다." { self.ty }
+        field base_price() -> Option<i32> as
+        "아이템 기본 가격입니다. null이면 매각 불가능 아이템임을 나타냅니다."
+        { self.base_price }
+        field is_catalyst() -> bool as
+        "촉매 사용 가능 여부를 나타냅니다."
+        { self.is_catalyst }
+
+        field categories(&executor) -> FieldResult<Vec<LSCategory>> as
+        "아이템이 속한 카테고리 목록입니다."
+        {
             let conn = executor.context().connection_pool().get()?;
             let categories = LSCategoryMapItem::belonging_to(self)
                 .select(category_map_ls::category)

@@ -20,9 +20,10 @@ use ::{
 };
 
 pub struct Mutation;
-pub struct LydieSuelle;
+struct LydieSuelle;
 
 #[derive(GraphQLInputObject)]
+#[graphql(description = "새로 추가할 아이템 정보입니다.")]
 struct LSNewItem {
     name: String,
     #[graphql(name = "type")]
@@ -75,13 +76,19 @@ struct LSModifyCategory {
 }
 
 graphql_object!(Mutation: Context |&self| {
-    field lydie_suelle() -> LydieSuelle {
+    field lydie_suelle() -> LydieSuelle as
+    "<리디&수르의 아틀리에> 정보를 변경합니다."
+    {
         LydieSuelle
     }
 });
 
 graphql_object!(LydieSuelle: Context as "LydieSuelleMut" |&self| {
-    field create_item(&executor, new_item: LSNewItem) -> FieldResult<LSItem> {
+    description: "<리디&수르의 아틀리에> 정보를 수정할 수 있는 오브젝트입니다."
+
+    field create_item(&executor, new_item: LSNewItem) -> FieldResult<LSItem> as
+    "새 아이템을 만듭니다."
+    {
         let conn = executor.context().connection_pool().get()?;
         let result = ::new_item(
             &conn,
@@ -95,7 +102,9 @@ graphql_object!(LydieSuelle: Context as "LydieSuelleMut" |&self| {
         Ok(result)
     }
 
-    field modify_item_data(&executor, id: i32, item: LSModifyItem) -> FieldResult<LSItem> {
+    field modify_item_data(&executor, id: i32, item: LSModifyItem) -> FieldResult<LSItem> as
+    "기존에 있던 아이템의 정보를 수정합니다."
+    {
         let conn = executor.context().connection_pool().get()?;
         let changeset = item.as_changeset()?;
         let ret = diesel::update(items_ls::table.filter(items_ls::id.eq(id)))
@@ -108,7 +117,9 @@ graphql_object!(LydieSuelle: Context as "LydieSuelleMut" |&self| {
         &executor,
         id: i32,
         categories: Vec<LSModifyCategory>
-    ) -> FieldResult<LSItem> {
+    ) -> FieldResult<LSItem> as
+    "기존에 있던 아이템의 카테고리를 수정합니다."
+    {
         let conn = executor.context().connection_pool().get()?;
         let (adds, removes): (Vec<_>, Vec<_>) =
                               categories
@@ -144,7 +155,9 @@ graphql_object!(LydieSuelle: Context as "LydieSuelleMut" |&self| {
         &executor,
         id: i32,
         categories: Vec<LSCategory>
-    ) -> FieldResult<LSItem> {
+    ) -> FieldResult<LSItem> as
+    "기존에 있던 아이템의 카테고리를 새로 설정합니다."
+    {
         let conn = executor.context().connection_pool().get()?;
         diesel::delete(
             category_map_ls::table.filter(
