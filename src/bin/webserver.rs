@@ -2,6 +2,8 @@ extern crate plachta;
 extern crate actix;
 extern crate actix_web;
 extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
 extern crate dotenv;
 extern crate juniper;
 extern crate serde_json;
@@ -36,6 +38,8 @@ use {
     dotenv::dotenv,
     futures::prelude::*,
 };
+
+embed_migrations!("./migrations");
 
 struct AuthMiddleware(String);
 
@@ -82,8 +86,11 @@ fn graphql(req: HttpRequest<State>) -> impl Future<Item=HttpResponse, Error=acti
         .responder()
 }
 
-fn main() {
+fn main() -> Result<(), failure::Error> {
     dotenv().ok();
+
+    let conn = establish_connection();
+    embedded_migrations::run(&conn.get()?)?;
 
     let auth_key = std::env::var("AUTH_KEY").ok();
     if auth_key.is_none() {
@@ -98,9 +105,8 @@ fn main() {
 
     let sys = actix::System::new("plachta");
 
-    let graphql_addr = SyncArbiter::start(4, || {
-        let conn = establish_connection();
-        GraphQlExecutor::new(conn)
+    let graphql_addr = SyncArbiter::start(4, move || {
+        GraphQlExecutor::new(conn.clone())
     });
 
     HttpServer::new(move || {
@@ -110,8 +116,10 @@ fn main() {
         }
         app.resource("/graphql", |r| r.post().a(graphql))
     })
-        .bind(&bind_addr).unwrap()
+        .bind(&bind_addr)?
         .start();
 
     let _ = sys.run();
+
+    Ok(())
 }
