@@ -1,11 +1,13 @@
 extern crate plachta;
 extern crate actix;
 extern crate actix_web;
+extern crate base64;
 extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 extern crate dotenv;
 extern crate juniper;
+extern crate rand;
 extern crate serde_json;
 extern crate failure;
 extern crate futures;
@@ -37,6 +39,7 @@ use {
     },
     dotenv::dotenv,
     futures::prelude::*,
+    rand::prelude::*,
 };
 
 embed_migrations!("./migrations");
@@ -93,11 +96,17 @@ fn main() -> Result<(), failure::Error> {
     embedded_migrations::run(&conn.get()?)?;
 
     let auth_key = std::env::var("AUTH_KEY").ok();
-    if auth_key.is_none() {
-        eprintln!("Cannot load AUTH_KEY, serving unauthorized");
-    } else {
+    let auth_key = if let Some(auth_key) = auth_key {
         eprintln!("AUTH_KEY set");
-    }
+        auth_key
+    } else {
+        eprintln!("Cannot load AUTH_KEY, generating");
+        let mut bytes = [0u8; 24];
+        thread_rng().fill_bytes(&mut bytes);
+        let auth_key = base64::encode(&bytes);
+        eprintln!("AUTH_KEY set to {}", auth_key);
+        auth_key
+    };
 
     let bind_addr = std::env::var("BIND_ADDRESS")
         .unwrap_or_else(|_| "127.0.0.1:8080".to_owned());
@@ -110,11 +119,9 @@ fn main() -> Result<(), failure::Error> {
     });
 
     HttpServer::new(move || {
-        let mut app = App::with_state(State { graphql: graphql_addr.clone() });
-        if let Some(ref value) = auth_key {
-            app = app.middleware(AuthMiddleware(value.clone()));
-        }
-        app.resource("/graphql", |r| r.post().a(graphql))
+        App::with_state(State { graphql: graphql_addr.clone() })
+            .middleware(AuthMiddleware(auth_key.clone()))
+            .resource("/graphql", |r| r.post().a(graphql))
     })
         .bind(&bind_addr)?
         .start();
