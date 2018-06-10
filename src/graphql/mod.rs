@@ -21,7 +21,7 @@ impl juniper::Context for Context {}
 impl Context {
     pub fn new(conn: PgConnectionPool) -> Self {
         Context {
-            conn
+            conn,
         }
     }
 

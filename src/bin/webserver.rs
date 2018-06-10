@@ -85,17 +85,23 @@ fn graphql(req: HttpRequest<State>) -> impl Future<Item=HttpResponse, Error=acti
 fn main() {
     dotenv().ok();
 
+    let auth_key = std::env::var("AUTH_KEY").ok();
+    if auth_key.is_none() {
+        eprintln!("Cannot load AUTH_KEY, serving unauthorized");
+    } else {
+        eprintln!("AUTH_KEY set");
+    }
+
+    let bind_addr = std::env::var("BIND_ADDRESS")
+        .unwrap_or_else(|_| "127.0.0.1:8080".to_owned());
+    eprintln!("Bind to {}", bind_addr);
+
     let sys = actix::System::new("plachta");
 
     let graphql_addr = SyncArbiter::start(4, || {
         let conn = establish_connection();
         GraphQlExecutor::new(conn)
     });
-
-    let auth_key = std::env::var("AUTH_KEY").ok();
-    if auth_key.is_none() {
-        eprintln!("Cannot load AUTH_KEY, serving unauthorized");
-    }
 
     HttpServer::new(move || {
         let mut app = App::with_state(State { graphql: graphql_addr.clone() });
@@ -104,7 +110,7 @@ fn main() {
         }
         app.resource("/graphql", |r| r.post().a(graphql))
     })
-        .bind("172.16.0.2:8080").unwrap()
+        .bind(&bind_addr).unwrap()
         .start();
 
     let _ = sys.run();
