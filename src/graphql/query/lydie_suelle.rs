@@ -17,22 +17,7 @@ use ::{
     },
 };
 
-pub struct Query;
-struct LydieSuelle;
-
-graphql_object!(Query: Context |&self| {
-    field api_version() -> &str as
-    "현재 API 버전입니다."
-    {
-        "0.1"
-    }
-
-    field lydie_suelle() -> LydieSuelle as
-    "<리디&수르의 아틀리에> 정보를 쿼리합니다."
-    {
-        LydieSuelle
-    }
-});
+pub struct LydieSuelle;
 
 graphql_object!(LydieSuelle: Context |&self| {
     description: "<리디&수르의 아틀리에> 정보를 쿼리할 수 있는 오브젝트입니다."

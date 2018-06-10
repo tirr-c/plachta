@@ -5,6 +5,7 @@ use {
     },
     juniper::FieldResult,
 };
+use super::ModifyCategoryOp;
 use ::{
     graphql::Context,
     models::{
@@ -19,8 +20,7 @@ use ::{
     },
 };
 
-pub struct Mutation;
-struct LydieSuelle;
+pub struct LydieSuelle;
 
 #[derive(GraphQLInputObject)]
 #[graphql(description = "새로 추가할 아이템 정보입니다.")]
@@ -63,25 +63,11 @@ impl LSModifyItem {
     }
 }
 
-#[derive(GraphQLEnum, Copy, Clone, PartialEq, Eq, Debug)]
-enum ModifyCategoryOp {
-    Add,
-    Remove,
-}
-
 #[derive(GraphQLInputObject)]
 struct LSModifyCategory {
     category: LSCategory,
     op: ModifyCategoryOp,
 }
-
-graphql_object!(Mutation: Context |&self| {
-    field lydie_suelle() -> LydieSuelle as
-    "<리디&수르의 아틀리에> 정보를 변경합니다."
-    {
-        LydieSuelle
-    }
-});
 
 graphql_object!(LydieSuelle: Context as "LydieSuelleMut" |&self| {
     description: "<리디&수르의 아틀리에> 정보를 수정할 수 있는 오브젝트입니다."
@@ -90,7 +76,7 @@ graphql_object!(LydieSuelle: Context as "LydieSuelleMut" |&self| {
     "새 아이템을 만듭니다."
     {
         let conn = executor.context().connection_pool().get()?;
-        let result = ::new_item(
+        let result = ::ops::lydie_suelle::new_item(
             &conn,
             &new_item.name,
             new_item.level,

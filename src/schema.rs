@@ -1,4 +1,4 @@
-use super::models::*;
+use ::models::*;
 
 table! {
     use diesel::sql_types::*;

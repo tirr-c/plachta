@@ -1,33 +1,11 @@
 #![allow(non_camel_case_types)]
 
-use super::schema::{items_ls, category_map_ls};
-
-macro_rules! make_variant_slice {
-    (
-        $(#[ $attr:meta ])*
-        pub enum $enum_name:ident [$slice_name:ident, $name_slice_name:ident] {
-            $($variant:ident,)*
-        }
-    ) => {
-        $(#[ $attr ])*
-        pub enum $enum_name {
-            $($variant,)*
-        }
-
-        pub const $slice_name: &'static [$enum_name] = &[
-            $($enum_name::$variant,)*
-        ];
-
-        pub const $name_slice_name: &'static [&'static str] = &[
-            $(stringify!($variant),)*
-        ];
-    };
-}
+use ::schema::{items_ls, category_map_ls};
 
 make_variant_slice! {
     #[derive(DbEnum, GraphQLEnum, Copy, Clone, PartialEq, Debug)]
     #[DieselType = "Item_category_ls"]
-    pub enum LSCategory [LS_CATEGORY_VARIANTS, LS_CATEGORY_NAMES] {
+    pub enum ItemCategory [CATEGORY_VARIANTS, CATEGORY_NAMES] {
         Plant,
         MagicGrass,
         Honeycomb,
@@ -87,7 +65,7 @@ make_variant_slice! {
 make_variant_slice! {
     #[derive(DbEnum, GraphQLEnum, Copy, Clone, PartialEq, Debug)]
     #[DieselType = "Item_type_ls"]
-    pub enum LSType [LS_TYPE_VARIANTS, LS_TYPE_NAMES] {
+    pub enum ItemType [TYPE_VARIANTS, TYPE_NAMES] {
         Material,
         Disposable,
         Attack,
@@ -107,20 +85,20 @@ make_variant_slice! {
 
 #[derive(Identifiable, Queryable, Debug)]
 #[table_name = "items_ls"]
-pub struct LSItem {
+pub struct Item {
     pub id: i32,
     pub name: String,
     pub lv: i32,
-    pub ty: LSType,
+    pub ty: ItemType,
     pub base_price: Option<i32>,
     pub is_catalyst: bool,
 }
 
 #[derive(Insertable)]
 #[table_name = "items_ls"]
-pub struct LSNewItem<'a> {
+pub struct NewItem<'a> {
     pub name: &'a str,
-    pub ty: LSType,
+    pub ty: ItemType,
     pub lv: i32,
     pub base_price: Option<i32>,
     pub is_catalyst: bool,
@@ -128,9 +106,9 @@ pub struct LSNewItem<'a> {
 
 #[derive(AsChangeset)]
 #[table_name = "items_ls"]
-pub struct LSUpdateItem<'a> {
+pub struct UpdateItem<'a> {
     pub name: Option<&'a str>,
-    pub ty: Option<LSType>,
+    pub ty: Option<ItemType>,
     pub lv: Option<i32>,
     pub base_price: Option<Option<i32>>,
     pub is_catalyst: Option<bool>,
@@ -138,18 +116,18 @@ pub struct LSUpdateItem<'a> {
 
 #[derive(Identifiable, Queryable, Associations, Debug)]
 #[table_name = "category_map_ls"]
-#[belongs_to(LSItem, foreign_key = "item_id")]
-pub struct LSCategoryMapItem {
+#[belongs_to(Item, foreign_key = "item_id")]
+pub struct CategoryMapItem {
     pub id: i32,
     pub item_id: i32,
-    pub category: LSCategory,
+    pub category: ItemCategory,
 }
 
 #[derive(Insertable)]
 #[table_name = "category_map_ls"]
-pub struct LSNewCategoryMapItem {
+pub struct NewCategoryMapItem {
     pub item_id: i32,
-    pub category: LSCategory,
+    pub category: ItemCategory,
 }
 
 mod graphql_impl {
@@ -158,13 +136,13 @@ mod graphql_impl {
     use super::*;
     use ::graphql::Context;
 
-    graphql_object!(LSItem: Context |&self| {
+    graphql_object!(Item: Context |&self| {
         description: "<리디 & 수르의 아틀리에> 아이템 정보를 나타내는 오브젝트입니다."
 
         field id() -> i32 as "아이템 ID입니다." { self.id }
         field name() -> &str as "아이템 이름입니다." { &self.name }
         field level() -> i32 as "아이템 레벨입니다." { self.lv }
-        field item_type() -> LSType as "아이템 종류입니다." { self.ty }
+        field item_type() -> ItemType as "아이템 종류입니다." { self.ty }
         field base_price() -> Option<i32> as
         "아이템 기본 가격입니다. null이면 매각 불가능 아이템임을 나타냅니다."
         { self.base_price }
@@ -172,13 +150,13 @@ mod graphql_impl {
         "촉매 사용 가능 여부를 나타냅니다."
         { self.is_catalyst }
 
-        field categories(&executor) -> FieldResult<Vec<LSCategory>> as
+        field categories(&executor) -> FieldResult<Vec<ItemCategory>> as
         "아이템이 속한 카테고리 목록입니다."
         {
             let conn = executor.context().connection_pool().get()?;
-            let categories = LSCategoryMapItem::belonging_to(self)
+            let categories = CategoryMapItem::belonging_to(self)
                 .select(category_map_ls::category)
-                .load::<LSCategory>(&conn)?;
+                .load::<ItemCategory>(&conn)?;
             Ok(categories)
         }
     });

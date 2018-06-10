@@ -25,8 +25,11 @@ use {
 };
 
 pub mod schema;
+#[macro_use]
+mod macros;
 pub mod models;
 pub mod graphql;
+pub mod ops;
 
 pub type PgConnectionPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -40,41 +43,4 @@ pub fn establish_connection() -> PgConnectionPool {
         .max_size(4)
         .build(ConnectionManager::new(database_url.clone()))
         .expect(&format!("Failed to build db pool ({})", database_url))
-}
-
-pub fn new_item<'a>(
-    conn: &PgConnection,
-    name: &'a str,
-    lv: i32,
-    ty: models::LSType,
-    base_price: Option<i32>,
-    is_catalyst: bool,
-    categories: &'a [models::LSCategory],
-) -> QueryResult<models::LSItem>
-{
-    use schema::{items_ls, category_map_ls};
-
-    let new_item = models::LSNewItem {
-        name,
-        lv,
-        ty,
-        base_price,
-        is_catalyst,
-    };
-
-    let item_result: models::LSItem =
-        diesel::insert_into(items_ls::table)
-        .values(&new_item)
-        .get_result(conn)?;
-    let item_id = item_result.id;
-
-    let new_categories =
-        categories.iter()
-        .map(|&cat| models::LSNewCategoryMapItem { item_id, category: cat })
-        .collect::<Vec<_>>();
-    diesel::insert_into(category_map_ls::table)
-        .values(new_categories)
-        .execute(conn)?;
-
-    Ok(item_result)
 }
