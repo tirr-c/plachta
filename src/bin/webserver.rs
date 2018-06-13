@@ -92,7 +92,9 @@ fn graphql(req: HttpRequest<State>) -> impl Future<Item=HttpResponse, Error=acti
 fn main() -> Result<(), failure::Error> {
     dotenv().ok();
 
-    let conn = establish_connection();
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL not set");
+    let conn = establish_connection(database_url)?;
     embedded_migrations::run(&conn.get()?)?;
 
     let auth_key = std::env::var("AUTH_KEY").ok();
