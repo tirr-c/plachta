@@ -18,7 +18,7 @@ use {
     serde_json,
 };
 use ::{
-    PgConnectionPool,
+    ConnectionPool,
     graphql::{
         Context,
         Mutation,
@@ -33,7 +33,7 @@ pub struct GraphQlExecutor {
 }
 
 impl GraphQlExecutor {
-    pub fn new(conn: PgConnectionPool) -> Self {
+    pub fn new(conn: ConnectionPool) -> Self {
         GraphQlExecutor {
             schema: juniper::RootNode::new(Query, Mutation),
             ctx: Context::new(conn),

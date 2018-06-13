@@ -31,9 +31,9 @@ pub mod models;
 pub mod graphql;
 pub mod ops;
 
-pub type PgConnectionPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+pub type ConnectionPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-pub fn establish_connection() -> PgConnectionPool {
+pub fn establish_connection() -> ConnectionPool {
     dotenv().ok();
 
     let database_url =

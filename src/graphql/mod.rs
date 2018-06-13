@@ -1,5 +1,5 @@
 use juniper;
-use ::PgConnectionPool;
+use ::ConnectionPool;
 
 mod actor;
 mod mutation;
@@ -15,17 +15,17 @@ pub use self::actor::{
 
 #[derive(Clone)]
 pub struct Context {
-    conn: PgConnectionPool,
+    conn: ConnectionPool,
 }
 impl juniper::Context for Context {}
 impl Context {
-    pub fn new(conn: PgConnectionPool) -> Self {
+    pub fn new(conn: ConnectionPool) -> Self {
         Context {
             conn,
         }
     }
 
-    pub fn connection_pool(&self) -> &PgConnectionPool {
+    pub fn connection_pool(&self) -> &ConnectionPool {
         &self.conn
     }
 }
